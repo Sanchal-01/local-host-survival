@@ -43,6 +43,12 @@
         >
           Send
         </button>
+        <button
+          id="broadcast-btn"
+          class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow mt-2"
+        >
+          ⚠️ Broadcast Emergency Alert
+        </button>
       </div>
     </div>
 
@@ -106,6 +112,28 @@
 
         // Dynamic Autoscroll: Locks chat view window viewport down to latest message
         chatBox.scrollTop = chatBox.scrollHeight;
+      });
+
+      const broadcastBtn = document.getElementById("broadcast-btn");
+
+      broadcastBtn.addEventListener("click", () => {
+        const text = msgInput.value.trim();
+        if (text !== "") {
+          socket.emit("send_broadcast", {
+            message: text,
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          });
+          msgInput.value = "";
+        }
+      });
+
+      socket.on("receive_broadcast", (data) => {
+        const banner = document.querySelector(".bg-red-600");
+        banner.innerText = `🚨 ALERT (${data.timestamp}): ${data.message}`;
+        banner.classList.add("bg-red-700", "text-xl"); // Make it prominent
       });
     </script>
   </body>
