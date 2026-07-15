@@ -1,194 +1,232 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>First Contact - Local Portal</title>
-    <link rel="stylesheet" href="/static/css/tailwind.min.css" />
-  </head>
-  <body class="bg-gray-900 text-white font-sans">
-    <div
-      class="bg-red-600 text-center py-2 px-4 font-bold animate-pulse text-sm"
-    >
-      SYSTEM OFFLINE: Local Disaster Network Active
-    </div>
-
-    <div class="max-w-md mx-auto my-6 p-4 bg-gray-800 rounded-lg shadow-lg">
-      <h2 class="text-xl font-bold mb-2">Local Mesh Chat</h2>
-
-      <div class="mb-3">
-        <input
-          id="username"
-          type="text"
-          placeholder="Enter your name..."
-          class="w-full p-2 rounded bg-gray-700 text-white text-sm focus:outline-none border border-gray-600 focus:border-blue-500"
-        />
-      </div>
-
-      <div
-        id="chat-box"
-        class="h-64 overflow-y-auto bg-gray-700 p-3 rounded mb-4 text-sm"
-      ></div>
-
-      <div class="flex gap-2">
-        <input
-          id="msg-input"
-          type="text"
-          placeholder="Type message..."
-          class="flex-1 p-2 rounded bg-gray-600 text-white focus:outline-none"
-        />
-        <button
-          id="send-btn"
-          class="bg-blue-600 px-4 py-2 rounded font-bold hover:bg-blue-700"
-        >
-          Send
-        </button>
-        <button
-          id="broadcast-btn"
-          class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow mt-2"
-        >
-          ⚠️ Broadcast Emergency Alert
-        </button>
-      </div>
-    </div>
-
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Portal - Live Test Dashboard</title>
     <script src="/static/js/socket.io.min.js"></script>
-    <script>
-      // 1. WebSocket Engine Initialization
-      const socket = io();
-
-      // 2. DOM Elements Mapping
-      const chatBox = document.getElementById("chat-box");
-      const msgInput = document.getElementById("msg-input");
-      const sendBtn = document.getElementById("send-btn");
-      const usernameInput = document.getElementById("username");
-      const broadcastBtn = document.getElementById("broadcast-btn"); // Broadcast button link
-
-      // ========================================================
-      // 1. CHAT HISTORY ENGINE (Database Persistence)
-      // ========================================================
-
-      // Connection hote hi purani chat history mango
-      socket.emit("request_chat_history");
-
-      // History receive karke screen par render karo
-      socket.on("chat_history", function (history) {
-        chatBox.innerHTML = ""; // Reconnect par duplicates rokne ke liye
-        history.forEach(function (message) {
-          displayMessage(
-            message.sender,
-            message.text,
-            message.is_broadcast,
-            message.timestamp,
-          );
-        });
-      });
-
-      // ========================================================
-      // 2. REUSABLE RENDERING ENGINE (UI Display)
-      // ========================================================
-      function displayMessage(sender, text, isBroadcast, timestamp) {
-        const messageElement = document.createElement("div");
-
-        // Styling Switch: Alert ke liye Red, Normal ke liye Blue border
-        if (isBroadcast) {
-          messageElement.className =
-            "mb-3 p-2 bg-red-900/30 rounded shadow-sm border-l-4 border-red-500 animate-pulse";
-        } else {
-          messageElement.className =
-            "mb-3 p-2 bg-gray-600 rounded shadow-sm border-l-4 border-blue-500";
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f3f4f6;
+            color: #1f2937;
         }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #111827;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #4b5563;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-chat {
+            background-color: #2563eb;
+            color: white;
+        }
+        .btn-chat:hover {
+            background-color: #1d4ed8;
+        }
+        .btn-alert {
+            background-color: #dc2626;
+            color: white;
+        }
+        .btn-alert:hover {
+            background-color: #b91c1c;
+        }
+        .chat-box {
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            background: #f9fafb;
+        }
+        .msg {
+            margin-bottom: 10px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        .msg-alert {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            color: #991b1b;
+            animation: pulse 2s infinite;
+        }
+        .msg-chat {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            color: #1e3a8a;
+        }
+        .timestamp {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 5px;
+            display: block;
+            text-align: right;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
 
-        messageElement.innerHTML = `
-        <div class="flex justify-between text-xs text-gray-400 font-semibold mb-1">
-            <span class="${isBroadcast ? "text-red-400" : ""}">
-                ${sender} ${isBroadcast ? "🚨 [ALERT]" : ""}
-            </span>
-            <span>${timestamp}</span>
+    <div class="container">
+        <h2>Disaster Portal - Live Test</h2>
+        
+        <div class="form-group">
+            <label for="username">Username:</label>
+            <input id="username" type="text" placeholder="Enter your name" value="Member4">
         </div>
-        <p class="text-sm text-white">${text}</p>
-    `;
 
-        chatBox.appendChild(messageElement);
-        chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to bottom
-      }
+        <div class="form-group">
+            <label for="msg">Message / Alert Content:</label>
+            <input id="msg" type="text" placeholder="Type emergency message here...">
+        </div>
 
-      // ========================================================
-      // 3. NORMAL CHAT LOGIC (Send/Receive)
-      // ========================================================
-      sendBtn.addEventListener("click", sendMessage);
-      msgInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") sendMessage();
-      });
+        <div class="btn-group">
+            <button id="send-btn" class="btn-chat" onclick="sendChat()">Send Normal Chat</button>
+            <button id="broadcast-btn" class="btn-alert" onclick="sendAlert()">Broadcast Alert 🚨</button>
+        </div>
 
-      function sendMessage() {
-        const text = msgInput.value.trim();
-        const user = usernameInput.value.trim() || "Anonymous";
+        <h3>Live Feed (Saved in Database)</h3>
+        <div id="chat-box" class="chat-box"></div>
+    </div>
 
-        if (text !== "") {
-          const payload = {
-            sender: user,
-            message: text,
-            is_broadcast: false,
-            timestamp: new Date().toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          };
-          socket.emit("send_message", payload);
-          msgInput.value = "";
-        }
-      }
+    <script>
+        // 1. Establish persistent local WebSocket link
+        const socket = io();
 
-      // Live normal message incoming hook
-      socket.on("receive_message", (data) => {
-        displayMessage(
-          data.sender,
-          data.message || data.text,
-          data.is_broadcast || false,
-          data.timestamp,
-        );
-      });
+        // 2. DOM Node Map bindings
+        const chatBox = document.getElementById("chat-box");
+        const msgInput = document.getElementById("msg");
+        const usernameInput = document.getElementById("username");
 
-      // ========================================================
-      // 4. EMERGENCY BROADCAST LOGIC (Fix: Wapas Joda Hai)
-      // ========================================================
+        // Request initial ledger records from SQLite upon activation
+        socket.emit("request_chat_history");
 
-      // Outgoing Broadcast: Jab alert button click hoga
-      if (broadcastBtn) {
-        broadcastBtn.addEventListener("click", () => {
-          const text = msgInput.value.trim();
-          const user = usernameInput.value.trim() || "System Admin";
-
-          if (text !== "") {
-            const payload = {
-              sender: user,
-              message: text,
-              is_broadcast: true, // Yeh database mein alert bankar save hoga
-              timestamp: new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-            };
-            socket.emit("send_broadcast", payload);
-            msgInput.value = "";
-          }
+        // Parse historical database log payload onto the UI thread
+        socket.on("chat_history", function (history) {
+            chatBox.innerHTML = ""; 
+            history.forEach(function (message) {
+                displayMessage(
+                    message.sender,
+                    message.text,
+                    message.is_broadcast,
+                    message.timestamp
+                );
+            });
         });
-      }
 
-      // Incoming Broadcast: Top banner ko live update karne ke liye
-      socket.on("receive_broadcast", (data) => {
-        // Top red flashing banner ka text change karo
-        const topBanner = document.querySelector(".bg-red-600");
-        if (topBanner) {
-          topBanner.innerText = `🚨 ALERT (${data.timestamp}): ${data.message}`;
-          topBanner.className =
-            "bg-red-700 text-center py-3 px-4 font-bold animate-bounce text-base sticky top-0 z-50 transition-all duration-300";
+        // 3. UI RENDERING FRAME: Injects components styled inside custom CSS specifications
+        function displayMessage(sender, text, isBroadcast, timestamp) {
+            const messageElement = document.createElement("div");
+            
+            if (isBroadcast) {
+                messageElement.className = "msg msg-alert";
+            } else {
+                messageElement.className = "msg msg-chat";
+            }
+
+            messageElement.innerHTML = `
+                <strong>${sender}${isBroadcast ? ' 🚨 [ALERT]' : ''}:</strong> ${text}
+                <span class="timestamp">${timestamp}</span>
+            `;
+
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto focus scrolling engine lock
         }
 
-        // Alert message ko chat box ke andar bhi laal rang mein insert karo
-        displayMessage(data.sender, data.message, true, data.timestamp);
-      });
+        // 4. ACTION INTERFACE ROUTERS: Standard message parsing schemes
+        function sendChat() {
+            const text = msgInput.value.trim();
+            const user = usernameInput.value.trim() || "Anonymous";
+
+            if (text !== "") {
+                const payload = {
+                    sender: user,
+                    message: text,
+                    is_broadcast: false,
+                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                };
+                socket.emit("send_message", payload);
+                msgInput.value = ""; 
+            }
+        }
+
+        function sendAlert() {
+            const text = msgInput.value.trim();
+            const user = usernameInput.value.trim() || "System Admin";
+
+            if (text !== "") {
+                const payload = {
+                    sender: user,
+                    message: text,
+                    is_broadcast: true,
+                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                };
+                socket.emit("send_broadcast", payload);
+                msgInput.value = ""; 
+            }
+        }
+
+        // Accessibility Hook: Let keyboard 'Enter' handle basic rapid chat flows
+        msgInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendChat();
+        });
+
+        // 5. INCOMING TRAFFIC ENGINE: Real-time network listener channels
+        socket.on("receive_message", (data) => {
+            displayMessage(data.sender, data.message || data.text, data.is_broadcast || false, data.timestamp);
+        });
+
+        socket.on("receive_broadcast", (data) => {
+            displayMessage(data.sender, data.message, true, data.timestamp);
+        });
     </script>
-  </body>
+</body>
 </html>
