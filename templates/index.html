@@ -10,7 +10,7 @@
     <div
       class="bg-red-600 text-center py-2 px-4 font-bold animate-pulse text-sm"
     >
-       SYSTEM OFFLINE: Local Disaster Network Active
+      SYSTEM OFFLINE: Local Disaster Network Active
     </div>
 
     <div class="max-w-md mx-auto my-6 p-4 bg-gray-800 rounded-lg shadow-lg">
@@ -48,28 +48,28 @@
 
     <script src="/static/js/socket.io.min.js"></script>
     <script>
-      // 1. Local server se automatically connect karo
+      // 1. WebSocket Engine Initialization (Establishes local server handshake link)
       const socket = io();
 
-      // 2. UI Elements ko target karo
+      // 2. DOM Elements Mapping for State Integration
       const chatBox = document.getElementById("chat-box");
       const msgInput = document.getElementById("msg-input");
       const sendBtn = document.getElementById("send-btn");
       const usernameInput = document.getElementById("username");
 
-      // 3. MESSAGE BHEJNA (Client -> Server)
+      // 3. ACTION EVENT LISTENERS: Capture dispatch triggers
       sendBtn.addEventListener("click", sendMessage);
       msgInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") sendMessage();
+        if (e.key === "Enter") sendMessage(); // Keyboard interface handler
       });
 
-      document.getElementById("username");
-
+      // 4. DATA TRANSMISSION LOGIC: Bundles and transmits active payload structure
       function sendMessage() {
         const text = msgInput.value.trim();
         const user = usernameInput.value.trim() || "Anonymous";
 
         if (text !== "") {
+          // Standard Data Scheme shared with Backend (Member 1) & Database (Member 2)
           const payload = {
             sender: user,
             message: text,
@@ -79,18 +79,20 @@
             }),
           };
 
-          // Server ko event emit karo
+          // Broadcast Outward: Emits structural object packet upstream via Socket
           socket.emit("send_message", payload);
-          msgInput.value = ""; // Input clear karo
+          msgInput.value = ""; // Clear execution frame input buffer
         }
       }
 
-      // 4. MESSAGE RECEIVE KARNA (Server -> Client)
+      // 5. DATA INGESTION ENGINE: Listens for downstream data broadcasted from Flask
       socket.on("receive_message", (data) => {
+        // Construct visual element payload card
         const messageElement = document.createElement("div");
         messageElement.className =
           "mb-3 p-2 bg-gray-600 rounded shadow-sm border-l-4 border-blue-500";
 
+        // Dynamic HTML injection framing incoming values
         messageElement.innerHTML = `
                 <div class="flex justify-between text-xs text-gray-400 font-semibold mb-1">
                     <span>${data.sender}</span>
@@ -99,7 +101,10 @@
                 <p class="text-sm text-white">${data.message}</p>
             `;
 
+        // Append UI frame inside the viewport node
         chatBox.appendChild(messageElement);
+
+        // Dynamic Autoscroll: Locks chat view window viewport down to latest message
         chatBox.scrollTop = chatBox.scrollHeight;
       });
     </script>
