@@ -35,12 +35,12 @@ def send_chat_history():
     # Retrieve raw tuples from SQLite DB
     history = get_all_messages()
     
-    # Format database tuples into a clean JSON list for the frontend
+    # Format database tuples into a clean JSON list matching frontend structure
     formatted_history = []
     for msg in history:
         formatted_history.append({
             "sender": msg[0],            # sender_name
-            "text": msg[1],              # message_text
+            "text": msg[1],              # message_text (Maps to message.text in frontend history)
             "timestamp": msg[2],         # timestamp
             "is_broadcast": bool(msg[3]) # is_broadcast converted to boolean
         })
@@ -54,10 +54,12 @@ def send_chat_history():
 def handle_message(data):
     """
     Triggered when a user sends a normal text message.
-    Expected data format: {'sender': 'John', 'text': 'Help required'}
+    Expected data format: {'sender': 'John', 'message': 'Help required', 'timestamp': '10:42 PM'}
     """
     sender = data.get('sender', 'Anonymous').strip()
-    message_text = data.get('text', '')
+    # FIX: Changed key from 'text' to 'message' to read frontend payload correctly
+    message_text = data.get('message', '')
+    timestamp = data.get('timestamp', '')
 
     # Validation: Reject empty or whitespace-only messages
     if not message_text.strip():
@@ -75,20 +77,24 @@ def handle_message(data):
     # Broadcast the message in real-time to everyone on the network
     emit('receive_message', {
         'sender': sender,
-        'text': message_text.strip(),
-        'is_broadcast': False
+        'message': message_text.strip(),
+        'is_broadcast': False,
+        'timestamp': timestamp
     }, broadcast=True)
 
 
 # 5. WebSocket Event: Handles high-priority emergency alerts
-@socketio.on('broadcast_alert')
+# FIX: Changed event listener from 'broadcast_alert' to 'send_broadcast' to catch frontend trigger
+@socketio.on('send_broadcast')
 def handle_alert(data):
     """
     High-priority broadcast flashed across the top banner of all active screens.
-    Expected data format: {'sender': 'Admin', 'text': 'Evacuate immediately'}
+    Expected data format: {'sender': 'Admin', 'message': 'Evacuate immediately', 'timestamp': '10:45 PM'}
     """
     sender = data.get('sender', 'Emergency Coordinator').strip()
-    alert_text = data.get('text', '')
+    # FIX: Changed key from 'text' to 'message' to read frontend payload correctly
+    alert_text = data.get('message', '')
+    timestamp = data.get('timestamp', '')
 
     # Validation: Reject empty or whitespace-only alerts
     if not alert_text.strip():
@@ -103,11 +109,12 @@ def handle_alert(data):
         is_broadcast=True
     )
 
-    # Instantly push the critical alert to all clients on the local network
-    emit('receive_message', {
+    # FIX: Emits to 'receive_broadcast' event so the frontend red banner animates instantly
+    emit('receive_broadcast', {
         'sender': sender,
-        'text': alert_text.strip(),
-        'is_broadcast': True
+        'message': alert_text.strip(),
+        'is_broadcast': True,
+        'timestamp': timestamp
     }, broadcast=True)
 
 
