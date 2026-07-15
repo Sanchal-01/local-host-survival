@@ -54,86 +54,140 @@
 
     <script src="/static/js/socket.io.min.js"></script>
     <script>
-      // 1. WebSocket Engine Initialization (Establishes local server handshake link)
+      // 1. WebSocket Engine Initialization
       const socket = io();
 
-      // 2. DOM Elements Mapping for State Integration
+      // 2. DOM Elements Mapping
       const chatBox = document.getElementById("chat-box");
       const msgInput = document.getElementById("msg-input");
       const sendBtn = document.getElementById("send-btn");
       const usernameInput = document.getElementById("username");
+      const broadcastBtn = document.getElementById("broadcast-btn"); // Broadcast button link
 
-      // 3. ACTION EVENT LISTENERS: Capture dispatch triggers
-      sendBtn.addEventListener("click", sendMessage);
-      msgInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") sendMessage(); // Keyboard interface handler
+      // ========================================================
+      // 1. CHAT HISTORY ENGINE (Database Persistence)
+      // ========================================================
+
+      // Connection hote hi purani chat history mango
+      socket.emit("request_chat_history");
+
+      // History receive karke screen par render karo
+      socket.on("chat_history", function (history) {
+        chatBox.innerHTML = ""; // Reconnect par duplicates rokne ke liye
+        history.forEach(function (message) {
+          displayMessage(
+            message.sender,
+            message.text,
+            message.is_broadcast,
+            message.timestamp,
+          );
+        });
       });
 
-      // 4. DATA TRANSMISSION LOGIC: Bundles and transmits active payload structure
+      // ========================================================
+      // 2. REUSABLE RENDERING ENGINE (UI Display)
+      // ========================================================
+      function displayMessage(sender, text, isBroadcast, timestamp) {
+        const messageElement = document.createElement("div");
+
+        // Styling Switch: Alert ke liye Red, Normal ke liye Blue border
+        if (isBroadcast) {
+          messageElement.className =
+            "mb-3 p-2 bg-red-900/30 rounded shadow-sm border-l-4 border-red-500 animate-pulse";
+        } else {
+          messageElement.className =
+            "mb-3 p-2 bg-gray-600 rounded shadow-sm border-l-4 border-blue-500";
+        }
+
+        messageElement.innerHTML = `
+        <div class="flex justify-between text-xs text-gray-400 font-semibold mb-1">
+            <span class="${isBroadcast ? "text-red-400" : ""}">
+                ${sender} ${isBroadcast ? "🚨 [ALERT]" : ""}
+            </span>
+            <span>${timestamp}</span>
+        </div>
+        <p class="text-sm text-white">${text}</p>
+    `;
+
+        chatBox.appendChild(messageElement);
+        chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to bottom
+      }
+
+      // ========================================================
+      // 3. NORMAL CHAT LOGIC (Send/Receive)
+      // ========================================================
+      sendBtn.addEventListener("click", sendMessage);
+      msgInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") sendMessage();
+      });
+
       function sendMessage() {
         const text = msgInput.value.trim();
         const user = usernameInput.value.trim() || "Anonymous";
 
         if (text !== "") {
-          // Standard Data Scheme shared with Backend (Member 1) & Database (Member 2)
           const payload = {
             sender: user,
             message: text,
+            is_broadcast: false,
             timestamp: new Date().toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             }),
           };
-
-          // Broadcast Outward: Emits structural object packet upstream via Socket
           socket.emit("send_message", payload);
-          msgInput.value = ""; // Clear execution frame input buffer
+          msgInput.value = "";
         }
       }
 
-      // 5. DATA INGESTION ENGINE: Listens for downstream data broadcasted from Flask
+      // Live normal message incoming hook
       socket.on("receive_message", (data) => {
-        // Construct visual element payload card
-        const messageElement = document.createElement("div");
-        messageElement.className =
-          "mb-3 p-2 bg-gray-600 rounded shadow-sm border-l-4 border-blue-500";
-
-        // Dynamic HTML injection framing incoming values
-        messageElement.innerHTML = `
-                <div class="flex justify-between text-xs text-gray-400 font-semibold mb-1">
-                    <span>${data.sender}</span>
-                    <span>${data.timestamp}</span>
-                </div>
-                <p class="text-sm text-white">${data.message}</p>
-            `;
-
-        // Append UI frame inside the viewport node
-        chatBox.appendChild(messageElement);
-
-        // Dynamic Autoscroll: Locks chat view window viewport down to latest message
-        chatBox.scrollTop = chatBox.scrollHeight;
+        displayMessage(
+          data.sender,
+          data.message || data.text,
+          data.is_broadcast || false,
+          data.timestamp,
+        );
       });
 
-      const broadcastBtn = document.getElementById("broadcast-btn");
+      // ========================================================
+      // 4. EMERGENCY BROADCAST LOGIC (Fix: Wapas Joda Hai)
+      // ========================================================
 
-      broadcastBtn.addEventListener("click", () => {
-        const text = msgInput.value.trim();
-        if (text !== "") {
-          socket.emit("send_broadcast", {
-            message: text,
-            timestamp: new Date().toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          });
-          msgInput.value = "";
-        }
-      });
+      // Outgoing Broadcast: Jab alert button click hoga
+      if (broadcastBtn) {
+        broadcastBtn.addEventListener("click", () => {
+          const text = msgInput.value.trim();
+          const user = usernameInput.value.trim() || "System Admin";
 
+          if (text !== "") {
+            const payload = {
+              sender: user,
+              message: text,
+              is_broadcast: true, // Yeh database mein alert bankar save hoga
+              timestamp: new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            };
+            socket.emit("send_broadcast", payload);
+            msgInput.value = "";
+          }
+        });
+      }
+
+      // Incoming Broadcast: Top banner ko live update karne ke liye
       socket.on("receive_broadcast", (data) => {
-        const banner = document.querySelector(".bg-red-600");
-        banner.innerText = `🚨 ALERT (${data.timestamp}): ${data.message}`;
-        banner.classList.add("bg-red-700", "text-xl"); // Make it prominent
+        // Top red flashing banner ka text change karo
+        const topBanner = document.querySelector(".bg-red-600");
+        if (topBanner) {
+          topBanner.innerText = `🚨 ALERT (${data.timestamp}): ${data.message}`;
+          topBanner.className =
+            "bg-red-700 text-center py-3 px-4 font-bold animate-bounce text-base sticky top-0 z-50 transition-all duration-300";
+        }
+
+        // Alert message ko chat box ke andar bhi laal rang mein insert karo
+        displayMessage(data.sender, data.message, true, data.timestamp);
       });
     </script>
   </body>
